@@ -1,9 +1,10 @@
 #pragma once
-#include <NTL/vector.h>
 #include <NTL/ZZ.h>
+#include <NTL/vector.h>
 
 using namespace NTL;
 
-double svp(int p, Vec<ZZ> a, double delta = 0.99);
-void svp_all(int p, double delta = 0.99);
-void svp_symmetric(int p, double delta = 0.99);
+double lll_svp(int p, Vec<ZZ> &a);
+double exact_svp(int p, Vec<ZZ> &a);
+void svp_all(int p, double (*svp)(int, Vec<ZZ> &), std::ofstream &file);
+void svp_symmetric(int p, double (*svp)(int, Vec<ZZ> &), std::ofstream &file);
