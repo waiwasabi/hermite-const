@@ -3,16 +3,17 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include "hlawka.h"
 #include "vector.h"
 
-void EXACT_LLL(Mat<ZZ> &B) {
+void EXACT_LLL(Mat<ZZ> &B, int) {
   ZZ det2;
   LLL(det2, B, 99, 100);
 }
 
-void KZ(Mat<ZZ> &B) { BKZ_FP(B, 0.99, N); }
+void KZ(Mat<ZZ> &B, int N) { BKZ_FP(B, 0.99, N); }
 
 /**
  * @brief Compute the length of the shortest vector
@@ -21,11 +22,12 @@ void KZ(Mat<ZZ> &B) { BKZ_FP(B, 0.99, N); }
  * @param p a non-negative integer
  * @param a a vector of type NTL::Vec<NTL::ZZ>
  * @param R a pointer to a function that performs a lattice basis reduction
+ * @param N the dimension of the lattice
  */
-double svp(int p, Vec<ZZ> &a, void (*R)(Mat<ZZ> &)) {
+double svp(int p, Vec<ZZ> &a, void (*R)(Mat<ZZ> &, int), int N) {
   Mat<ZZ> B;
-  hlawka::B(B, p, a);
-  R(B);
+  hlawka::B(B, p, a, N);
+  R(B, N);
   return norm(B[0]);
 }
 
@@ -35,8 +37,9 @@ double svp(int p, Vec<ZZ> &a, void (*R)(Mat<ZZ> &)) {
  *
  * @param p a non-negative integer
  * @param a a vector of type NTL::Vec<NTL::ZZ>
+ * @param N the dimension of the lattice
  */
-double lll_svp(int p, Vec<ZZ> &a) { return svp(p, a, EXACT_LLL); }
+double lll_svp(int p, Vec<ZZ> &a, int N) { return svp(p, a, EXACT_LLL, N); }
 
 /**
  * @brief Compute the length of the shortest vector in the
@@ -44,37 +47,60 @@ double lll_svp(int p, Vec<ZZ> &a) { return svp(p, a, EXACT_LLL); }
  *
  * @param p a non-negative integer
  * @param a a vector of type NTL::Vec<NTL::ZZ>
+ * @param N the dimension of the lattice
  */
-double exact_svp(int p, Vec<ZZ> &a) { return svp(p, a, KZ); }
+double exact_svp(int p, Vec<ZZ> &a, int N) { return svp(p, a, KZ, N); }
 
 /**
  * @brief Compute svp(p, a) for each a in U(p)
- * and save results to a file
  *
  * @param p a non-negative integer
  * @param svp a pointer to a function that computes svp(p, a)
- * @param file a reference to an output file stream
+ * @param N the dimension of the lattice
  */
-void svp_all(int p, double (*svp)(int, Vec<ZZ> &), std::ofstream &file) {
+void svp_all(int p, double (*svp)(int, Vec<ZZ> &, int), int N,
+             std::ofstream &) {
   Vec<ZZ> a;
-  hlawka::U(a);
+  hlawka::U(a, N);
 
   for (int i = 0; i < pow(p, N - 1); i++) {
-    file << svp(p, a) << " ";
-    hlawka::increment(a, p);
+    svp(p, a, N);
+    hlawka::increment(a, p, N);
   }
 }
 
 /**
+ * @brief Compute svp(p, a) for each a in a symmetric s U(p)
  *
+ * @param p a non-negative integer
+ * @param svp a pointer to a function that computes svp(p, a)
+ * @param N the dimension of the lattice
+ * @param file a reference to an output file stream
  */
-void svp_symmetric(int p, double (*svp)(int, Vec<ZZ> &), std::ofstream &file) {
-  int b = p / 2;
+void svp_symmetric(int p, double (*svp)(int, Vec<ZZ> &, int), int N,
+                   std::ofstream &file) {
+  int b = p / 4;
   Vec<ZZ> a;
-  hlawka::U(a);
+  hlawka::U(a, N);
 
-  for (int i = 0; i < pow(b, N - 1); i++) {
-    file << svp(p, a) << " ";
-    hlawka::increment(a, b);
+  double m = -1;
+  std::vector<Vec<ZZ>> v;
+
+  while (a[1] < b) {
+    double l = svp(p, a, N);
+    if (l > m) {
+      m = l;
+      v.clear();
+    }
+    if (l >= m) {
+      v.push_back(a);
+    }
+    hlawka::symmetric_increment(a, p, N);
   }
+
+  file << p << ' ' << m / hlawka::q(p, N) << ' ';
+  for (auto &i : v) {
+    file << i << ' ';
+  }
+  file << std::endl;
 }

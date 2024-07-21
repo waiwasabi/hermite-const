@@ -3,14 +3,12 @@
 
 using namespace NTL;
 
-// constants
-const int N = 4;
 
 // function prototypes
-
 namespace hlawka {
-void increment(Vec<ZZ> &a, int p);
-void U(Vec<ZZ> &a);
-void B(Mat<ZZ> &B, int p, Vec<ZZ> a);
-double q(int p);
+void increment(Vec<ZZ> &a, int p, int N);
+void symmetric_increment(Vec<ZZ> &a, int p, int N);
+void U(Vec<ZZ> &a, int N);
+void B(Mat<ZZ> &B, int p, Vec<ZZ> a, int N);
+double q(int p, int N);
 }  // namespace hlawka
