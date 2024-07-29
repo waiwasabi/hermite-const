@@ -48,7 +48,7 @@ The following commands will build, test, and install `ntl-11.5.1` in `/usr/local
 Simply clone the repository, i.e.
 
 ```
-git clone https://git.atian.me/aaron/sphere-packing.git
+git clone https://github.com/waiwasabi/sphere-packing.git
 ```
 
 This will copy the project to `sphere-packing`.
