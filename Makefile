@@ -13,10 +13,10 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS = $(wildcard $(INCLUDE_DIR)/*.h)
 
 # Compiler flags
-CXXFLAGS=-g -Wall -Wextra -I$(INCLUDE_DIR)
+CXXFLAGS=-std=c++11 -g -fopenmp -Wall -Wextra -I$(INCLUDE_DIR)
 
 # Linker flags
-LDLIBS=-lntl -lgmp -lm
+LDLIBS=-lntl -lgmp -lm -fopenmp
 
 # Target executable
 TARGET = $(BIN_DIR)/main
