@@ -106,7 +106,14 @@ void svp_all(int p, double (*svp)(int, Vec<ZZ> &, int), int N, std::ofstream &) 
 
 /**
  * @brief Parallel computation svp(p, a) for each a in a
- * symmetric subdivision of U(p)
+ * symmetric subdivision of U(p).
+ *
+ * Writes output of the form
+ *
+ * p,m,v1,v2,...,vn
+ *
+ * to file, where m is the maximum value of svp(p, a)
+ * and v1, v2, ..., vn are the vectors that achieve this length.
  *
  * @param p a non-negative integer
  * @param svp a pointer to a function that computes svp(p, a)
@@ -154,6 +161,22 @@ void svp_sym(int p, double (*svp)(int, Vec<ZZ> &, int), int N, std::ofstream &fi
 /**
  * @brief Parallel computation of svp(p, a) for each a in the hypercube of
  * given center and radius lying in the symmetric subdivision of U(p).
+ *
+ *
+ * Writes output of the form
+ *
+ * p,m,v1,v2,...,vn
+ *
+ * to file, where m is the maximum value of svp(p, a)
+ * and v1, v2, ..., vn are the vectors that achieve this length.
+ *
+ * @param p a non-negative integer
+ * @param center center of the hypercube
+ * @param radius radius of the hypercube
+ * @param svp a pointer to a function that computes svp(p, a)
+ * @param N the dimension of the lattice
+ * @param file a reference to an output file stream
+ *
  */
 void svp_symc(int p, Vec<RR> &center, RR radius, double (*svp)(int, Vec<ZZ> &, int), int N, std::ofstream &file) {
     int b = p / 4;
