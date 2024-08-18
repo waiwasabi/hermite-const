@@ -1,3 +1,5 @@
+#include "svp.hpp"
+
 #include <NTL/LLL.h>
 
 #include <deque>
@@ -5,8 +7,11 @@
 #include <fstream>
 #include <iostream>
 
-#include "hlawka.h"
-#include "vector.h"
+#include "hlawka.hpp"
+#include "vector.hpp"
+
+using namespace NTL;
+using namespace svp_algorithm;
 
 void EXACT_LLL(Mat<ZZ> &B, int) {
     ZZ det2;
@@ -15,6 +20,35 @@ void EXACT_LLL(Mat<ZZ> &B, int) {
 
 void KZ(Mat<ZZ> &B, int N) {
     BKZ_FP(B, 0.99, N);
+}
+
+/**
+ * @brief Helper function to update the maximum value of svp(p, a)
+ */
+void update(double &l, double &m, std::deque<Vec<ZZ>> &v, Vec<ZZ> &a) {
+    if (l > m) {
+        m = l;
+        v.clear();
+    }
+    if (l >= m) {
+        v.push_back(a);
+    }
+}
+
+void merge(std::deque<Vec<ZZ>> &v, std::deque<Vec<ZZ>> &vp, double &m, double &mp) {
+    if (mp > m) {
+        m = mp, v = vp;
+    } else if (mp == m) {
+        v.insert(v.end(), vp.begin(), vp.end());
+    }
+}
+
+void write(std::ofstream &file, int p, double m, std::deque<Vec<ZZ>> &v, int N) {
+    file << '[' << p << ',' << m / Hlawka::q(p, N);
+    for (auto &i : v) {
+        file << ',' << i;
+    }
+    file << ']' << std::endl;
 }
 
 /**
@@ -33,6 +67,7 @@ double svp(int p, Vec<ZZ> &a, void (*R)(Mat<ZZ> &, int), int N) {
     return norm(B[0]);
 }
 
+namespace svp_algorithm {
 /**
  * @brief Compute the length of the shortest vector in the
  * LLL-reduced basis of B(p, a)
@@ -58,50 +93,47 @@ double exact_svp(int p, Vec<ZZ> &a, int N) {
 }
 
 /**
- * @brief Helper function to update the maximum value of svp(p, a)
- */
-void update(double &l, double &m, std::deque<Vec<ZZ>> &v, Vec<ZZ> &a) {
-    if (l > m) {
-        m = l;
-        v.clear();
-    }
-    if (l >= m) {
-        v.push_back(a);
-    }
-}
-
-void merge(std::deque<Vec<ZZ>> &v, std::deque<Vec<ZZ>> &vp, double &m, double &mp) {
-    if (mp > m) {
-        m = mp;
-        v = vp;
-    } else if (mp == m) {
-        v.insert(v.end(), vp.begin(), vp.end());
-    }
-}
-
-void write(std::ofstream &file, int p, double m, std::deque<Vec<ZZ>> &v, int N) {
-    file << '[' << p << ',' << m / Hlawka::q(p, N);
-    for (auto &i : v) {
-        file << ',' << i;
-    }
-    file << ']' << std::endl;
-}
-
-/**
  * @brief Compute svp(p, a) for each a in U(p)
  *
  * @param svp a pointer to a function that computes svp(p, a)
  * @param p a non-negative integer
  * @param N the dimension of the lattice
  */
-void svp_all(double (*svp)(int, Vec<ZZ> &, int), int p, int N, std::ofstream &) {
+void svp_all(svp_alg svp, int p, int N, std::ofstream &file) {
     Vec<ZZ> a;
     Hlawka::U(a, N);
 
-    for (int i = 0; i < pow(p, N - 1); i++) {
-        svp(p, a, N);
-        Hlawka::incr(a, p, N);
+    double m = -1;          // maximum value of svp(p, a)
+    std::deque<Vec<ZZ>> v;  // vectors that achieve the maximum value of svp(p, a)
+
+    int sstop = 0;  // shared stop condition
+#pragma omp parallel
+    {  // parallel region
+        Vec<ZZ> ap;
+        std::deque<Vec<ZZ>> vp;
+        double mp = -1;
+
+        while (!sstop) {
+#pragma omp critical
+            {            // increment a
+                ap = a;  // thread makes a copy
+                Hlawka::incr(a, p, N);
+            }
+
+            if (ap[1] < p) {
+                double l = svp(p, ap, N);  // compute svp(p, a)
+                update(l, mp, vp, ap);     // update maximum across thread
+            } else {
+#pragma omp atomic
+                sstop++;
+            }
+        }
+
+#pragma omp critical
+        merge(v, vp, m, mp);  // merge results across threads
     }
+
+    write(file, p, m, v, N);  // write results to file
 }
 
 /**
@@ -120,7 +152,7 @@ void svp_all(double (*svp)(int, Vec<ZZ> &, int), int p, int N, std::ofstream &) 
  * @param N the dimension of the lattice
  * @param file a reference to an output file stream
  */
-void svp_sym(double (*svp)(int, Vec<ZZ> &, int), int p, int N, std::ofstream &file) {
+void svp_sym(svp_alg svp, int p, int N, std::ofstream &file) {
     int b = p / 4;
     Vec<ZZ> a;        // shared counter
     Hlawka::U(a, N);  // initialize a to the first element of U(p)
@@ -178,7 +210,7 @@ void svp_sym(double (*svp)(int, Vec<ZZ> &, int), int p, int N, std::ofstream &fi
  * @param file a reference to an output file stream
  *
  */
-void svp_symc(double (*svp)(int, Vec<ZZ> &, int), int p, int N, Vec<RR> &center, RR radius, std::ofstream &file) {
+void svp_symc(svp_alg svp, int p, int N, Vec<RR> &center, RR radius, std::ofstream &file) {
     int b = p / 4;
 
     Vec<ZZ> c = conv<Vec<ZZ>>(center * p);
@@ -201,7 +233,7 @@ void svp_symc(double (*svp)(int, Vec<ZZ> &, int), int p, int N, Vec<RR> &center,
 #pragma omp critical
             {
                 ap = a;
-                Hlawka::symc_incr(a, p, c, r, N);
+                Hlawka::center_incr(a, p, c, r, N);
             }
             if (ap[1] < b && ap[1] < c[1] + r) {
                 double l = svp(p, ap, N);
@@ -217,3 +249,4 @@ void svp_symc(double (*svp)(int, Vec<ZZ> &, int), int p, int N, Vec<RR> &center,
 
     write(file, p, m, v, N);
 }
+}  // namespace svp_algorithm

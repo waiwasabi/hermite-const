@@ -1,5 +1,6 @@
-#include <NTL/RR.h>
-#include <hlawka.h>
+#include "vector.hpp"
+
+using namespace NTL;
 
 /**
  * @brief Compute the norm of a vector
