@@ -1,49 +1,115 @@
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 
-#include <random>
-
-#include "hlawka.h"
-#include "svp.h"
-#include "vector.h"
+#include "svp.hpp"
 
 using namespace std;
+using namespace NTL;
+using namespace svp_algorithm;
+namespace fs = std::filesystem;
 
-int main() {
-    using std::chrono::duration;
-    using std::chrono::duration_cast;
-    using std::chrono::high_resolution_clock;
-    using std::chrono::milliseconds;
+enum tokens {
+    NUMBER,
+    SVP_ALGORITHM,
+    MODE,
+};
 
-    ofstream file("svp_best.txt");
+enum mode {
+    ALL,
+    SYMMETRIC,
+};
 
-    auto t1 = high_resolution_clock::now();
+map<string, svp_alg> d = {
+    {"lll", lll_svp},
+    {"bkz", exact_svp}};  // map of svp algorithms
 
-    // iterate over p in [2, 1000)
-    // for (int p = 2; p < 1000; p++) {
-    //     svp_sym(p, exact_svp, 60, file);
-    // }
+map<string, mode> m = {
+    {"all", ALL},
+    {"sym", SYMMETRIC}};  // map of modes
 
-    for (int n = 2; n < 1000; n++) {
-        int p = 4 * n;
-        // random_device rd; // obtain a random number from hardware
-        // mt19937 gen(rd()); // seed the generator
-        // uniform_int_distribution<> distr(0, p - 1); // define the range
+tokens get_token(string s) {
+    if (all_of(s.begin(), s.end(), ::isdigit)) {
+        return NUMBER;
+    } else if (d.find(s) != d.end()) {
+        return SVP_ALGORITHM;
+    } else if (m.find(s) != m.end()) {
+        return MODE;
+    } else {
+        cerr << "Error: invalid argument '" << s << "'" << endl;
+        exit(1);
+    }
+}
 
-        // Vec<ZZ> a;
-        // Hlawka::U(a, n);
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        cerr << "Usage: " << argv[0] << " N start [stop] [step] [lll|bkz] [all|sym|center] [args...]" << endl;
+        exit(1);
+    }
+    int N, start, stop, step = 1;
+    svp_alg f = exact_svp;
+    mode mode = ALL;
+    string alg_s = "bkz", mode_s = "all";
 
-        // for (int i = 1; i < n; i++) {
-        //     a[i] = distr(gen);
-        // }
-
-        svp_sym(exact_svp, p, n, file);
-        // file << n << "," << p << "," << exact_svp(p, a, n) / Hlawka::q(p, n) << endl;
+    if (get_token(argv[1]) != NUMBER) {
+        cerr << "Error: invalid argument '" << argv[1] << "'" << endl;
+        exit(1);
+    } else {
+        N = stoi(argv[1]);
     }
 
-    auto t2 = high_resolution_clock::now();
+    if (get_token(argv[2]) != NUMBER) {
+        cerr << "Error: invalid argument '" << argv[2] << "'" << endl;
+        exit(1);
+    } else {
+        start = stop = stoi(argv[2]);
+    }
 
-    cout << "Time: " << duration_cast<milliseconds>(t2 - t1).count() / 1000.0 << "s" << endl;
+    int idx = 3;
+    if (idx < argc && get_token(argv[idx]) == NUMBER) {
+        stop = stoi(argv[idx]);
+        idx++;
+    }
+
+    if (idx < argc && get_token(argv[idx]) == NUMBER) {
+        step = stoi(argv[idx]);
+        idx++;
+    }
+
+    if (idx < argc && get_token(argv[idx]) == SVP_ALGORITHM) {
+        f = d[argv[idx]];
+        alg_s = argv[idx];
+        idx++;
+    }
+
+    if (idx < argc && get_token(argv[idx]) == MODE) {
+        mode = m[argv[idx]];
+        mode_s = argv[idx];
+        idx++;
+    }
+
+    // create output directory
+    fs::create_directory("out");
+    fs::create_directory("out/" + to_string(N));
+
+    ofstream file("out/" + to_string(N) + "/" + to_string(start) + "-" + to_string(stop) + "-" + to_string(step) + "-" + alg_s + "-" + mode_s + ".txt");
+    cout << "N = " << N << ", start = " << start << ", stop = " << stop << ", step = " << step << ", algorithm = " << alg_s << ", mode = " << mode_s << endl;
+    switch (mode) {
+        case ALL: {
+            for (int p = start; p <= stop; p += step) {
+                svp_all(f, p, N, file);
+            }
+            break;
+        }
+        case SYMMETRIC: {
+            for (int p = start; p <= stop; p += step) {
+                svp_sym(f, p, N, file);
+            }
+            break;
+        }
+    }
 
     return 0;
 }
