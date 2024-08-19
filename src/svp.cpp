@@ -3,7 +3,6 @@
 #include <NTL/LLL.h>
 
 #include <deque>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -120,7 +119,7 @@ void svp_all(svp_alg svp, int p, int N, std::ofstream &file) {
                 Hlawka::incr(a, p, N);
             }
 
-            if (ap[1] < p) {
+            if (ap[0] == 1) {
                 double l = svp(p, ap, N);  // compute svp(p, a)
                 update(l, mp, vp, ap);     // update maximum across thread
             } else {
