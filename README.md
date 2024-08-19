@@ -24,6 +24,7 @@ This project implements a heuristic search on the $\mathfrak{U}(p)$ space of lat
 This section assumes that the dependencies
  - C++11
  - NTL 11.5.1
+ - GMP (strongly recommended)
 
 are installed on the user's machine. See [here](#getting-started) for instructions on installing NTL.
 
@@ -45,6 +46,9 @@ The following instructions describe the basic steps required to download the pro
 
  - C++11
  - NTL 11.5.1
+ - GMP (strongly recommended)
+
+GMP is already installed on most Unix distributions and is strongly recommended to enable faster arithmetic with NTL. Please see [here](https://libntl.org/doc/tour-gmp.html) for instructions on setting up GMP if it is not already installed. Alternatively, see [here](https://libntl.org/doc/tour-unix.html) for instructions on setting up NTL without GMP.
 
 Install Victor Shoup's [NTL](https://libntl.org/) library. The project was tested with `ntl-11.5.1`, the latest version as of July 2024.
 
