@@ -14,7 +14,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS = $(wildcard $(INCLUDE_DIR)/*.h)
 
 # Compiler flags
-CXXFLAGS=-std=c++11 -g -fopenmp -Wall -Wextra -I$(INCLUDE_DIR) # -I$(NTL_DIR)/include -L$(NTL_DIR)/lib
+CXXFLAGS=-std=c++11 -g -fopenmp -Wall -Wextra -I$(INCLUDE_DIR) #-I$(NTL_DIR)/include -L$(NTL_DIR)/lib
 
 # Linker flags
 LDLIBS=-lstdc++fs -lntl -lgmp -lm -fopenmp
