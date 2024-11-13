@@ -12,6 +12,8 @@
   - [Documentation](#documentation)
     - [`all`](#all)
     - [`sym`](#sym)
+    - [`sym_d`](#sym_d)
+    - [`sym_ds`](#sym_ds)
   - [Contributing](#contributing)
   - [References](#references)
 
@@ -98,8 +100,9 @@ This will copy the project to `sphere-packing`.
 Alternatively, download a release directly:
 
 ```
-% wget https://github.com/waiwasabi/sphere-packing/archive/refs/tags/0.1.0.zip
-% unzip sphere-packing-0.1.0.zip
+% wget https://github.com/waiwasabi/sphere-packing/archive/refs/tags/0.1.0.tar.gz
+& gunzip 0.1.0.tar.gz
+% tar xf 0.1.0.tar
 ```
 
 ### Building the Project
@@ -152,7 +155,7 @@ See table below for a description of the parameters.
 | `stop` | &cross; | `start` | int | evaluate $p$ in range [start, stop] |
 | `step` | &cross; | 1 | int | the increment at which $p$ increases |
 | `svp_algorithm` | &cross; | "bkz" | "lll or "bkz" | the algorithm used to approximate SVP |
-| `mode` | &cross; | "all" | "all" or "sym" | determines the subset of $\mathfrak{U}(p)$ to evaluate |
+| `mode` | &cross; | "all" | "all" or "sym" or "sym_d" or "sym_ds" | determines the subset of $\mathfrak{U}(p)$ to evaluate |
 | `args...` | &cross; |  |  | additional parameters to be specified |
 
 
@@ -209,6 +212,18 @@ Brute force search on $\mathfrak{U}(p)$ lattices. For each $a\in\mathfrak{U}(p)$
 Parameters: None
 
 Search only the vectors belonging to a $1/4$ corner of the $\mathfrak{U}(p)$ hypercube. 
+
+### `sym_d`
+
+Parameters: `r` (float, Default: 0.3)
+
+Search in a cone of radius r around the diagonal.
+
+### `sym_ds`
+
+Parameters: `r` (float, Default: 0.3)
+
+Search in a cone of radius `r` around the diagonal. Stop early when a lattice satisfying Minkowski's bound is found.
 
 ## Contributing
 

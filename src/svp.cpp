@@ -190,6 +190,124 @@ void svp_sym(svp_alg svp, int p, int N, std::ofstream &file) {
 }
 
 /**
+ * @brief Parallel computation svp(p, a) along the diagonal in a
+ * symmetric subdivision of U(p).
+ *
+ * Writes output of the form
+ *
+ * [p,m,v1,v2,...,vn]
+ *
+ * to file, where m is the maximum value of svp(p, a)
+ * and v1, v2, ..., vn are the vectors that achieve this length.
+ *
+ * @param svp a pointer to a function that computes svp(p, a)
+ * @param p a non-negative integer
+ * @param N the dimension of the lattice
+ * @param file a reference to an output file stream
+ */
+void svp_sym_diag(svp_alg svp, int p, int N, double r, std::ofstream &file) {
+    int b = p / 4;
+    Vec<ZZ> a;        // shared counter
+    Hlawka::U(a, N);  // initialize a to the first element of U(p)
+
+    double m = -1;          // maximum value of svp(p, a)
+    std::deque<Vec<ZZ>> v;  // vectors that achieve the maximum value of svp(p, a)
+
+    int sstop = 0;  // shared stop condition
+#pragma omp parallel
+    {  // parallel region
+        Vec<ZZ> ap;
+        double mp = -1;
+        std::deque<Vec<ZZ>> vp;
+
+        while (!sstop) {
+#pragma omp critical
+            {            // increment a
+                ap = a;  // thread makes a copy
+                Hlawka::sym_diag_incr(a, p, N, r);
+            }
+
+            if (ap[1] < b) {
+                double l = svp(p, ap, N);  // compute svp(p, a)
+                update(l, mp, vp, ap);     // update maximum across thread
+            } else {
+#pragma omp atomic
+                sstop++;
+            }
+        }
+
+#pragma omp critical
+        merge(v, vp, m, mp);  // merge results across threads
+    }
+
+    write(file, p, m, v, N);  // write results to file
+}
+
+/**
+ * @brief Parallel computation svp(p, a) along the diagonal in a
+ * symmetric subdivision of U(p). Stop when some vector achieves the
+ * Minkowski bound and returns 1 if this happens.
+ *
+ * Writes output of the form
+ *
+ * [p,m,v1,v2,...,vn]
+ *
+ * to file, where m is the maximum value of svp(p, a)
+ * and v1, v2, ..., vn are the vectors that achieve this length.
+ *
+ * @param svp a pointer to a function that computes svp(p, a)
+ * @param p a non-negative integer
+ * @param N the dimension of the lattice
+ * @param file a reference to an output file stream
+ */
+int svp_sym_diag_stop(svp_alg svp, int p, int N, double r, std::ofstream &file) {
+    int b = p / 4;
+    Vec<ZZ> a;        // shared counter
+    Hlawka::U_max(a, b, N);  // initialize a to the first element of U(p)
+
+    double m = -1;          // maximum value of svp(p, a)
+    std::deque<Vec<ZZ>> v;  // vectors that achieve the maximum value of svp(p, a)
+
+    int ret = 0;
+    int sstop = 0;  // shared stop condition
+#pragma omp parallel
+    {  // parallel region
+        Vec<ZZ> ap;
+        double mp = -1;
+        std::deque<Vec<ZZ>> vp;
+
+        while (!sstop) {
+#pragma omp critical
+            {            // increment a
+                ap = a;  // thread makes a copy
+                Hlawka::sym_diag_decr(a, b, N, r);
+            }
+
+            if (ap[1] > 0) {
+                double l = svp(p, ap, N);  // compute svp(p, a)
+                update(l, mp, vp, ap);     // update maximum across thread
+
+                if (l / Hlawka::q(p, N) >= Hlawka::minkowski(N)) {
+#pragma omp atomic
+                    ret++;
+#pragma omp atomic
+                    sstop++;
+                }
+            } else {
+#pragma omp atomic
+                sstop++;
+            }
+        }
+
+#pragma omp critical
+        merge(v, vp, m, mp);  // merge results across threads
+    }
+
+    write(file, p, m, v, N);  // write results to file
+    return ret;
+}
+
+/**
  * @brief Parallel computation of svp(p, a) for each a in the hypercube of
  * given center and radius lying in the symmetric subdivision of U(p).
  *
@@ -209,7 +327,7 @@ void svp_sym(svp_alg svp, int p, int N, std::ofstream &file) {
  * @param file a reference to an output file stream
  *
  */
-void svp_symc(svp_alg svp, int p, int N, Vec<RR> &center, RR radius, std::ofstream &file) {
+void svp_symc(svp_alg svp, int p, int N, Vec<RR> &center, RR &radius, std::ofstream &file) {
     int b = p / 4;
 
     Vec<ZZ> c = conv<Vec<ZZ>>(center * p);

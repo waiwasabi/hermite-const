@@ -1,9 +1,11 @@
 #include <algorithm>
+#include <chrono>
 #include <experimental/filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
 
+#include "hlawka.hpp"
 #include "svp.hpp"
 
 using namespace std;
@@ -13,6 +15,7 @@ namespace fs = std::experimental::filesystem;
 
 enum tokens {
     NUMBER,
+    FLOAT,
     SVP_ALGORITHM,
     MODE,
 };
@@ -20,6 +23,8 @@ enum tokens {
 enum mode {
     ALL,
     SYMMETRIC,
+    SYMMETRIC_DIAG,
+    SYMMETRIC_DIAG_STOP
 };
 
 map<string, svp_alg> d = {
@@ -28,11 +33,15 @@ map<string, svp_alg> d = {
 
 map<string, mode> m = {
     {"all", ALL},
-    {"sym", SYMMETRIC}};  // map of modes
+    {"sym", SYMMETRIC},
+    {"sym_d", SYMMETRIC_DIAG},
+    {"sym_ds", SYMMETRIC_DIAG_STOP}};  // map of modes
 
 tokens get_token(string s) {
     if (all_of(s.begin(), s.end(), ::isdigit)) {
         return NUMBER;
+    } else if (all_of(s.begin(), s.end(), [](char c) { return isdigit(c) || c == '.'; })) {
+        return FLOAT;
     } else if (d.find(s) != d.end()) {
         return SVP_ALGORITHM;
     } else if (m.find(s) != m.end()) {
@@ -43,7 +52,26 @@ tokens get_token(string s) {
     }
 }
 
+using std::chrono::duration;
+using std::chrono::duration_cast;
+using std::chrono::high_resolution_clock;
+using std::chrono::milliseconds;
+
 int main(int argc, char *argv[]) {
+    // // ofstream outfile("time.txt");
+
+    // for (int i = 2; i < 999; i++) {
+    //     int p = 600;
+    //     Vec<ZZ> a = Hlawka::random_U(i, 400, 550);
+
+    //     auto t1 = high_resolution_clock::now();
+    //     double l = exact_svp(p, a, i);
+    //     auto t2 = high_resolution_clock::now();
+    //     cout << "N = " << i << " " << l / Hlawka::q(p, i) << " " << Hlawka::minkowski(i) << endl;
+    //     // auto ms_int = duration_cast<milliseconds>(t2 - t1);
+    //     // outfile << i << " " << ms_int.count() << endl;
+    // }
+
     if (argc < 3) {
         cerr << "Usage: " << argv[0] << " N start [stop] [step] [lll|bkz] [all|sym|center] [args...]" << endl;
         exit(1);
@@ -95,6 +123,7 @@ int main(int argc, char *argv[]) {
     fs::create_directory("out/" + to_string(N));
 
     ofstream file("out/" + to_string(N) + "/" + to_string(start) + "-" + to_string(stop) + "-" + to_string(step) + "-" + alg_s + "-" + mode_s + ".txt");
+
     cout << "N = " << N << ", start = " << start << ", stop = " << stop << ", step = " << step << ", algorithm = " << alg_s << ", mode = " << mode_s << endl;
     switch (mode) {
         case ALL: {
@@ -106,6 +135,28 @@ int main(int argc, char *argv[]) {
         case SYMMETRIC: {
             for (int p = start; p <= stop; p += step) {
                 svp_sym(f, p, N, file);
+            }
+            break;
+        }
+        case SYMMETRIC_DIAG: {
+            double r = 0.3;
+            if (idx < argc && get_token(argv[idx]) == FLOAT) {
+                r = stod(argv[idx]);
+                idx++;
+            }
+            for (int p = start; p <= stop; p += step) {
+                svp_sym_diag(f, p, N, r, file);
+            }
+            break;
+        }
+        case SYMMETRIC_DIAG_STOP: {
+            double r = 0.3;
+            if (idx < argc && get_token(argv[idx]) == FLOAT) {
+                r = stod(argv[idx]);
+                idx++;
+            }
+            for (int p = start; p <= stop; p += step) {
+                if (svp_sym_diag_stop(f, p, N, r, file) >= 1) break;
             }
             break;
         }

@@ -9,5 +9,7 @@ double lll_svp(int p, NTL::Vec<NTL::ZZ> &a, int N);
 double exact_svp(int p, NTL::Vec<NTL::ZZ> &a, int N);
 void svp_all(svp_alg f, int p, int N, std::ofstream &file);
 void svp_sym(svp_alg f, int p, int N, std::ofstream &file);
-void svp_symc(svp_alg f, int p, int N, NTL::Vec<NTL::RR> &center, NTL::RR radius, std::ofstream &file);
+void svp_sym_diag(svp_alg f, int p, int N, double r, std::ofstream &file);
+int svp_sym_diag_stop(svp_alg f, int p, int N, double r, std::ofstream &file);
+void svp_symc(svp_alg f, int p, int N, NTL::Vec<NTL::RR> &c, NTL::RR &r, std::ofstream &file);
 }  // namespace svp_algorithm

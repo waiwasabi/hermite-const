@@ -6,7 +6,7 @@ SRC_DIR = ./src
 INCLUDE_DIR = ./include
 BUILD_DIR = ./build
 BIN_DIR = .
-#NTL_DIR = /path/to/NTL
+#NTL_DIR = ./sw
 
 # Files
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
@@ -37,6 +37,10 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
 $(TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDLIBS)
+
+$(TEST): $(OBJS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(SRC_DIR)/test.cpp $^ -o $@ $(LDLIBS)
 
 clean:
 	$(RM) *.o *.d $(TARGET)
